@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # AssetCare Web Application
+  assetcare-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: assetcare_web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=assetcare-secure-jwt-production-secret-2026
+      - DATABASE_URL=postgresql://assetcare_admin:secure_pg_password_2026@postgres:5432/assetcare_db
+    volumes:
+      - assetcare_data:/app/data
+      - assetcare_uploads:/app/public/uploads
+    depends_on:
+      - postgres
+
+  # PostgreSQL Database Engine with RLS
+  postgres:
+    image: postgres:16-alpine
+    container_name: assetcare_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=assetcare_admin
+      - POSTGRES_PASSWORD=secure_pg_password_2026
+      - POSTGRES_DB=assetcare_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./supabase/migrations/20261106_init_assetcare.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  assetcare_data:
+  assetcare_uploads:
+  postgres_data:

@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "AssetCare",
+    "slug": "assetcare",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.assetcare.vault",
+      "infoPlist": {
+        "NSCameraUsageDescription": "AssetCare needs camera access to photograph purchase invoices, service bills, and scan asset QR tags.",
+        "NSPhotoLibraryUsageDescription": "AssetCare needs gallery access to upload saved bill PDFs and invoice photos."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f172a"
+      },
+      "package": "com.assetcare.vault"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AssetCare to access your camera to scan bills and QR tags."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0d9488"
+        }
+      ]
+    ]
+  }
+}
