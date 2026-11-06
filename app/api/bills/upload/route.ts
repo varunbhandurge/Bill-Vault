@@ -39,17 +39,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Save file locally in public/uploads/
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    // Determine storage strategy (support serverless Vercel /tmp or Data URL)
+    let publicFilePath = `/uploads/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const mimeType = file.type || 'application/octet-stream';
+    const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+    try {
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const safeFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const filePath = path.join(uploadDir, safeFileName);
+      fs.writeFileSync(filePath, buffer);
+      publicFilePath = `/uploads/${safeFileName}`;
+    } catch (writeErr) {
+      // In serverless read-only environments, fall back to base64 Data URL for universal display
+      console.warn('Filesystem write not available, storing as data URI:', writeErr);
+      publicFilePath = `data:${mimeType};base64,${buffer.toString('base64')}`;
     }
-
-    const safeFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const filePath = path.join(uploadDir, safeFileName);
-    fs.writeFileSync(filePath, buffer);
-
-    const publicFilePath = `/uploads/${safeFileName}`;
     const docId = `doc-${Date.now()}`;
 
     // If assetId was not supplied upfront, try to match or default to first user asset

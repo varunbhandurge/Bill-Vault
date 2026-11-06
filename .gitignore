@@ -40,3 +40,6 @@ mobile/dist/
 .idea/
 *.tmp
 *.bak
+
+.vercel
+.env*

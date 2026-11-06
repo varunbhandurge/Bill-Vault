@@ -42,12 +42,18 @@ interface DatabaseSchema {
   audit_logs: AuditLog[];
 }
 
-const DB_DIR = path.join(process.cwd(), 'data');
-const DB_FILE = path.join(DB_DIR, 'assetcare_db.json');
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const BUNDLED_DB_FILE = path.join(process.cwd(), 'data', 'assetcare_db.json');
+const DB_DIR = isVercel ? '/tmp/assetcare_data' : path.join(process.cwd(), 'data');
+const DB_FILE = isVercel ? path.join(DB_DIR, 'assetcare_db.json') : BUNDLED_DB_FILE;
 
 // Ensure DB directory exists
-if (!fs.existsSync(DB_DIR)) {
-  fs.mkdirSync(DB_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(DB_DIR)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn('Could not create DB directory:', e);
 }
 
 function readDatabase(): DatabaseSchema {
@@ -55,6 +61,19 @@ function readDatabase(): DatabaseSchema {
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, 'utf-8');
       return JSON.parse(data);
+    } else if (fs.existsSync(BUNDLED_DB_FILE)) {
+      const data = fs.readFileSync(BUNDLED_DB_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      // If on Vercel, copy bundled DB to /tmp for subsequent write mutations
+      if (isVercel) {
+        try {
+          if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
+          fs.writeFileSync(DB_FILE, data, 'utf-8');
+        } catch (copyErr) {
+          console.warn('Could not copy bundled DB to /tmp:', copyErr);
+        }
+      }
+      return parsed;
     }
   } catch (error) {
     console.error('Error reading database file:', error);
@@ -79,9 +98,16 @@ function readDatabase(): DatabaseSchema {
 }
 
 function writeDatabase(data: DatabaseSchema): void {
-  const tmpFile = `${DB_FILE}.tmp`;
-  fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tmpFile, DB_FILE);
+  try {
+    if (!fs.existsSync(DB_DIR)) {
+      fs.mkdirSync(DB_DIR, { recursive: true });
+    }
+    const tmpFile = `${DB_FILE}.tmp`;
+    fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(tmpFile, DB_FILE);
+  } catch (error) {
+    console.error('Error writing database file:', error);
+  }
 }
 
 // ------------------------------------------------------------------------------
